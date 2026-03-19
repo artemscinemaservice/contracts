@@ -14,6 +14,13 @@ jobs:
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
+      - name: Install deps
+        run: yarn install --frozen-lockfile
+
+      - name: Generate TS Protobuf
+        run: yarn run generate
+
       - run: npm publish
+        name: Publish to npm
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
