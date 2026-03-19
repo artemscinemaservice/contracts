@@ -16,12 +16,15 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - name: Install deps
         run: yarn install --frozen-lockfile
-      
+
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Install ts-proto plugin
         run: npm install -g ts-proto
+
+      - name: Create gen directory
+        run: mkdir -p gen
 
       - name: Generate TS Protobuf
         run: yarn run generate
