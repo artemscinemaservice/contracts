@@ -23,13 +23,13 @@ jobs:
       - name: Read package metadata
         id: package
         run: |
-          echo "name=$(node -p 'require(\"./package.json\").name')" >> "$GITHUB_OUTPUT"
-          echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+          echo "package_name=$(node -p 'require(\"./package.json\").name')" >> "$GITHUB_OUTPUT"
+          echo "package_version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
 
       - name: Check npm publish status
         id: npm_status
         run: |
-          if npm view "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}" version >/dev/null 2>&1; then
+          if npm view "${{ steps.package.outputs.package_name }}@${{ steps.package.outputs.package_version }}" version >/dev/null 2>&1; then
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
@@ -40,7 +40,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "v${{ steps.package.outputs.version }}" >/dev/null 2>&1; then
+          if gh release view "v${{ steps.package.outputs.package_version }}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -69,11 +69,17 @@ jobs:
         if: steps.release_status.outputs.exists != 'true' && (steps.npm_status.outputs.published == 'true' || steps.publish.outcome == 'success')
         env:
           GH_TOKEN: ${{ github.token }}
-          PACKAGE_NAME: ${{ steps.package.outputs.name }}
-          PACKAGE_VERSION: ${{ steps.package.outputs.version }}
+          PACKAGE_NAME: ${{ steps.package.outputs.package_name }}
+          PACKAGE_VERSION: ${{ steps.package.outputs.package_version }}
         run: |
+          printf 'Published `%s@%s` to npm.\n\nPackage: https://www.npmjs.com/package/%s\n' \
+            "${PACKAGE_NAME}" \
+            "${PACKAGE_VERSION}" \
+            "${PACKAGE_NAME}" \
+            > release-notes.md
+
           gh release create "v${PACKAGE_VERSION}" \
             --target "${GITHUB_SHA}" \
             --title "v${PACKAGE_VERSION}" \
             --generate-notes \
-            --notes "Published \`${PACKAGE_NAME}@${PACKAGE_VERSION}\` to npm. Package: https://www.npmjs.com/package/${PACKAGE_NAME}"
+            --notes-file release-notes.md
