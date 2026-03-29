@@ -11,20 +11,33 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: "https://registry.npmjs.org"
+
       - name: Install deps
         run: yarn install --frozen-lockfile
 
+      # ✅ стабильное чтение версии через jq
       - name: Read package metadata
         id: package
         run: |
-          echo "package_name=$(node -p 'require(\"./package.json\").name')" >> "$GITHUB_OUTPUT"
-          echo "package_version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+          VERSION=$(jq -r .version package.json)
+          NAME=$(jq -r .name package.json)
+
+          echo "package_version=$VERSION" >> $GITHUB_OUTPUT
+          echo "package_name=$NAME" >> $GITHUB_OUTPUT
+
+      # (опционально) debug — можно удалить потом
+      - name: Debug values
+        run: |
+          echo "VERSION=${{ steps.package.outputs.package_version }}"
+          echo "NAME=${{ steps.package.outputs.package_name }}"
 
       - name: Check npm publish status
         id: npm_status
@@ -35,12 +48,13 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # ✅ более надёжная проверка релиза
       - name: Check GitHub release status
         id: release_status
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "v${{ steps.package.outputs.package_version }}" >/dev/null 2>&1; then
+          if gh release list | grep -q "v${{ steps.package.outputs.package_version }}"; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
@@ -58,15 +72,16 @@ jobs:
       - name: Generate TS Protobuf
         run: yarn run generate
 
-      - run: npm publish
-        name: Publish to npm
+      - name: Publish to npm
         id: publish
         if: steps.npm_status.outputs.published != 'true'
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      # ✅ упрощённое и надёжное условие
       - name: Create GitHub release
-        if: steps.release_status.outputs.exists != 'true' && (steps.npm_status.outputs.published == 'true' || steps.publish.outcome == 'success')
+        if: steps.release_status.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           PACKAGE_NAME: ${{ steps.package.outputs.package_name }}
