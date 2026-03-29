@@ -23,7 +23,6 @@ jobs:
       - name: Install deps
         run: yarn install --frozen-lockfile
 
-      # ✅ стабильное чтение версии через jq
       - name: Read package metadata
         id: package
         run: |
@@ -33,7 +32,6 @@ jobs:
           echo "package_version=$VERSION" >> $GITHUB_OUTPUT
           echo "package_name=$NAME" >> $GITHUB_OUTPUT
 
-      # (опционально) debug — можно удалить потом
       - name: Debug values
         run: |
           echo "VERSION=${{ steps.package.outputs.package_version }}"
@@ -48,7 +46,6 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # ✅ более надёжная проверка релиза
       - name: Check GitHub release status
         id: release_status
         env:
@@ -79,7 +76,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # ✅ упрощённое и надёжное условие
       - name: Create GitHub release
         if: steps.release_status.outputs.exists != 'true'
         env:
