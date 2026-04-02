@@ -9,7 +9,8 @@
   },
   "files": [
     "proto",
-    "gen"
+    "gen",
+    "dist"
   ],
   "description": "Protobuf contracts for Cinema Service",
   "dependencies": {
